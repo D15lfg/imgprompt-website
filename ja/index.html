@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      /* 首次访问按浏览器语言选站：中文→/zh/、日文→/ja/、西语→/es/，其余一律英文。
+         用户手动点过语言后就记下来，不再自动跳转。 */
+      (function () {
+        document.documentElement.classList.add("js");
+        try {
+          if (localStorage.getItem("imgprompt-lang") === "manual") return;
+        } catch (e) {}
+        // 站内跳转（点语言按钮、点页脚链接）尊重用户选择，不自动改回
+        var ref = document.referrer;
+        if (ref && ref.indexOf(location.origin + "/") === 0) return;
+        var PATHS = {"en": "../", "zh": "../zh/", "ja": "./", "es": "../es/"};
+        var CURRENT = "ja";
+        // 只有英文根页做自动跳转。/zh/ /ja/ /es/ 永远直接返回自己的内容：
+        // Googlebot 的语言是 en-US，若子页也跳，它抓这三页时会被弹回根页，
+        // 这三页就永远收录不了。
+        if (CURRENT !== "en") return;
+        var langs = navigator.languages || [navigator.language || ""];
+        var pick = "en";
+        for (var i = 0; i < langs.length; i++) {
+          var tag = String(langs[i]).toLowerCase();
+          if (tag.indexOf("zh") === 0) { pick = "zh"; break; }
+          if (tag.indexOf("ja") === 0) { pick = "ja"; break; }
+          if (tag.indexOf("es") === 0) { pick = "es"; break; }
+        }
+        if (PATHS[pick] === PATHS[CURRENT]) return;
+        var target = PATHS[pick] + location.hash;
+        location.replace(target);
+      })();
+    </script>
+
+    <title>ImgPrompt — 画像をプロンプトに変換する Chrome 拡張</title>
+    <meta
+      name="description"
+      content="ImgPrompt は画像を AI アート用プロンプトに変換する Chrome 拡張です。右クリック・ドラッグ＆ドロップ・Alt+S の範囲キャプチャで、中国語・英語・構造化 JSON のプロンプトを同時に取得できます。無料クレジット付き、API キー不要。"
+    />
+    <meta
+      name="keywords"
+      content="画像からプロンプト,プロンプト生成,画像 プロンプト AI,AI アート プロンプト,Chrome 拡張,画像解析 JSON"
+    />
+    <meta name="author" content="ImgPrompt" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#fbfbfb" />
+    <link rel="icon" type="image/png" href="../assets/icon48.png" />
+    <link rel="apple-touch-icon" href="../assets/icon128.png" />
+
+    <!-- 公開後に仮ドメインを差し替えてからコメントを外してください -->
+    <!-- <link rel="canonical" href="https://your-domain.com/ja/" /> -->
+    <link rel="alternate" hreflang="en" href="https://your-domain.com/" />
+    <link rel="alternate" hreflang="zh-CN" href="https://your-domain.com/zh/" />
+    <link rel="alternate" hreflang="ja" href="https://your-domain.com/ja/" />
+    <link rel="alternate" hreflang="es" href="https://your-domain.com/es/" />
+    <link rel="alternate" hreflang="x-default" href="https://your-domain.com/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ImgPrompt" />
+    <meta property="og:locale" content="ja_JP" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:locale:alternate" content="zh_CN" />
+    <meta property="og:locale:alternate" content="es_ES" />
+    <meta property="og:url" content="https://your-domain.com/ja/" />
+    <meta property="og:title" content="ImgPrompt — どんな画像でもプロンプトに" />
+    <meta
+      property="og:description"
+      content="右クリック、ドラッグ＆ドロップ、Alt+S。中国語・英語・JSON を一度に。無料クレジット付き。"
+    />
+    <meta property="og:image" content="https://your-domain.com/assets/og-cover.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="ImgPrompt のパネルが Pinterest の画像から構造化 JSON プロンプトを返している画面" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ImgPrompt — どんな画像でもプロンプトに" />
+    <meta
+      name="twitter:description"
+      content="Chrome 拡張：画像からプロンプトへ。中国語 / 英語 / JSON を出力。無料クレジット付き。"
+    />
+    <meta name="twitter:image" content="https://your-domain.com/assets/og-cover.jpg" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../assets/site.css" />
+
+        <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ImgPrompt",
+  "alternateName": "ImgPrompt - Image to Prompt",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Chrome",
+  "description": "ImgPrompt は、Web 上の画像・ローカル画像・スクリーンショットの範囲を解析して、中国語・英語・構造化 JSON のプロンプトを生成する Chrome 拡張です。",
+  "url": "https://your-domain.com/ja/",
+  "image": "https://your-domain.com/assets/og-cover.jpg",
+  "inLanguage": [
+    "zh-CN",
+    "en",
+    "ja",
+    "ko",
+    "es",
+    "pt",
+    "th",
+    "ru"
+  ],
+  "offers": {
+    "@type": "AggregateOffer",
+    "lowPrice": "0",
+    "highPrice": "7",
+    "priceCurrency": "USD",
+    "offerCount": "4",
+    "description": "登録時の無料クレジットに加え、毎日のチェックインでもクレジットを獲得。クレジットパックは $1 から $7。"
+  },
+  "featureList": [
+    "画像からプロンプトへの解析",
+    "中国語 / 英語 / JSON 出力",
+    "Alt+S 範囲キャプチャ",
+    "ドラッグ＆ドロップ解析",
+    "タスクキュー（最大 5 枚）",
+    "Markdown 書き出し付きプロンプト管理",
+    "OpenAI 互換の独自 API"
+  ],
+  "screenshot": "https://your-domain.com/assets/og-cover.jpg"
+}
+    </script>
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "inLanguage": "ja",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "使うのに API キーは必要ですか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "いいえ。登録すると無料クレジットが付き、毎日のチェックインでも追加されるので、 インストール直後から解析できます。キーが必要になるのは、クレジットを使い切ったとき、 または自分のモデルを使いたいときだけです。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "API キーはどこかに送信されますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "独自のキーはブラウザ内に保存され、サーバーへ同期されません。公式クレジットを使う場合、 画像は ImgPrompt の解析サービスへ送られます。独自 API を使う場合は、 設定したエンドポイントへ直接送られます。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "どの生成ツールで使えますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "2 種類のプロンプトは、ChatGPT、Gemini などの対話型画像モデルでも、 Midjourney、Stable Diffusion、Flux、即梦、豆包、通义万相 でもそのまま使えます。 JSON 出力は構造化した保存や自動処理に向きます。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "ショートカットは何ですか？変更できますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "既定は Alt / Option + S です。 変更するには chrome://extensions/shortcuts を開き、 そこでショートカットを設定し直してください。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "どのサイトでも動きますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "はい。Chrome が拡張機能の実行を許可しているページなら、どこでもパネルが開きます。 ローカルファイルをそのままドロップしても解析できます。Chrome のストアページと 新しいタブページは、通常の例外です。"
+      }
+    }
+  ]
+}
+    </script>
+  </head>
+
+  <body>
+    <div class="nav-wrap">
+      <header class="nav">
+        <a class="brand" href="./" aria-label="ImgPrompt ホーム">
+          <img src="../assets/icon48.png" alt="ImgPrompt アイコン" width="22" height="22" />
+          <span class="brand-word">ImgPrompt</span>
+        </a>
+
+        <nav class="nav-links" aria-label="メインナビゲーション">
+          <a href="#capabilities">機能</a>
+          <a href="#pricing">料金</a>
+          <a href="#faq">よくある質問</a>
+        </nav>
+
+        <div class="nav-right">
+          <div class="lang" data-open="false">
+            <button
+              class="lang-btn"
+              type="button"
+              aria-expanded="false"
+              aria-controls="lang-menu"
+              aria-label="現在の言語：日本語。言語を変更"
+            >
+              <span class="lang-current">日</span>
+              <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" /></svg>
+            </button>
+            <ul class="lang-menu" id="lang-menu" hidden>
+              <li><a href="../" hreflang="en" lang="en">English</a></li>
+              <li><a href="../zh/" hreflang="zh-CN" lang="zh-CN">中文</a></li>
+              <li><a href="./" hreflang="ja" lang="ja" aria-current="page">日本語</a></li>
+              <li><a href="../es/" hreflang="es" lang="es">Español</a></li>
+            </ul>
+          </div>
+          <a
+            class="nav-store"
+            aria-label="Chrome ウェブストアで ImgPrompt を入手"
+            href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+            target="_blank"
+            rel="noopener"
+          >
+            <span class="chrome-glyph" aria-hidden="true"></span>
+            <span class="store-label">ImgPrompt を入手</span>
+          </a>
+        </div>
+      </header>
+    </div>
+
+    <main>
+      <section class="hero">
+        <div class="shell hero-inner">
+          <span class="eyebrow">
+            <span class="dot" aria-hidden="true"></span>
+            Chrome 拡張 · 600 人以上のクリエイターが導入
+          </span>
+
+          <h1>
+            どんな画像も、<br />
+            その<span class="hl">プロンプト</span>に。<br />
+            ワンクリックで。
+          </h1>
+
+          <p class="lede">
+            ImgPrompt は、被写体・構図・光・配色・スタイルを画像から読み取り、
+            中国語・英語・構造化 JSON のプロンプトを一度に返します。
+            ChatGPT、Gemini、その他の画像モデルにそのまま貼り付けられます。
+          </p>
+
+          <div class="hero-actions">
+            <a
+              class="btn btn-primary"
+              href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+              target="_blank"
+              rel="noopener"
+            >
+              <span class="chrome-glyph" aria-hidden="true"></span>
+              chrome に追加
+            </a>
+            <a class="btn btn-ghost" href="#capabilities">使い方を見る</a>
+          </div>
+
+          <div class="hero-notes">
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+              登録で無料クレジット
+            </span>
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+              API キー不要
+            </span>
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+              キーはローカル保存
+            </span>
+          </div>
+        </div>
+
+        <div class="stage">
+          <div class="stage-glow" aria-hidden="true"></div>
+
+          <div class="hero-demo">
+            <video
+              class="hero-media"
+              src="../assets/hero-demo.mp4"
+              poster="../assets/hero-poster.jpg"
+              width="1920"
+              height="1108"
+              autoplay
+              muted
+              loop
+              playsinline
+              preload="metadata"
+              aria-label="ImgPrompt が Pinterest の画像を解析し、パネルに中国語・英語・JSON のプロンプトを返す様子"
+            ></video>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="capabilities">
+        <div class="shell">
+          <div class="section-head reveal">
+            <h2>プロンプトを構成する<br />すべてを。</h2>
+            <p class="lede">
+              どんな画像でも ImgPrompt を開けば、ショットリストのように読み取れます。
+            </p>
+          </div>
+
+          <div class="feat-grid reveal">
+            <article class="feat">
+              <div class="shot">
+                <div class="s-row">
+                  <span class="s-chip" data-on="true">右クリック</span>
+                  <span class="s-chip">ドラッグ</span>
+                  <span class="s-chip">Alt + S</span>
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>3 つの入口</h3>
+                <p>画像メニュー、ファイルのドロップ、画面に引く矩形。どの方法でも同じパネルに届きます。</p>
+              </div>
+            </article>
+
+            <article class="feat">
+              <div class="shot">
+                <div class="s-row">
+                  <span class="s-chip"><i class="s-dot cyan"></i>ZH</span>
+                  <span class="s-chip"><i class="s-dot amber"></i>EN</span>
+                  <span class="s-chip"><i class="s-dot pink"></i>JSON</span>
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>3 つのプロンプトを 1 回で</h3>
+                <p>中国語・英語は ChatGPT、Gemini、Midjourney、Flux などにそのまま。JSON は自動処理向け。</p>
+              </div>
+            </article>
+
+            <article class="feat">
+              <div class="shot">
+                <div class="s-field">
+                  <span class="s-field-text">被写体を白い猫に変える</span>
+                  <span class="caret" aria-hidden="true"></span>
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>1 行で修正</h3>
+                <p>変えたい点を書くだけ。3 つのプロンプトがまとめて書き直され、再解析は不要です。</p>
+              </div>
+            </article>
+
+            <article class="feat">
+              <div class="shot">
+                <div class="s-stack">
+                  <span class="s-thumb"></span>
+                  <span class="s-thumb"></span>
+                  <span class="s-thumb"></span>
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>タスクキュー</h3>
+                <p>最大 5 枚まで並べられます。次の 1 枚は自動で始まるので、まとめて処理しても付き添いは不要です。</p>
+              </div>
+            </article>
+
+            <article class="feat">
+              <div class="shot">
+                <div class="s-doc">
+                  <b># リファレンス</b><br />
+                  - 茶トラ、逆光、フィルムグレイン<br />
+                  - 玩具キャラ、フラットベクター、セルシェーディング
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>プロンプト管理</h3>
+                <p>結果はサムネイルと元リンク付きで保存されます。日時で絞り込み、Markdown に書き出せます。</p>
+              </div>
+            </article>
+
+            <article class="feat">
+              <div class="shot">
+                <div class="s-langs">
+                  <b>日本語</b> · English · 中文<br />
+                  한국어 · Español · Русский
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>UI は 8 言語</h3>
+                <p>画面表示もプロンプトも、設定で選んだ言語に合わせます。</p>
+              </div>
+            </article>
+
+            <article class="feat feat-wide">
+              <div class="shot">
+                <div class="s-doc" style="max-width: 320px">
+                  <b>--accent:</b> #8bd3ff<br />
+                  <b>--radius:</b> 22px<br />
+                  <b>--style:</b> "flat vector, cel shading"
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>何度でも使えるプロンプト</h3>
+                <p>
+                  汎用・写真・イラスト・グラフィックデザイン・UI・ゲーム素材・商品撮影の
+                  7 つのシーンプリセットを用意。自作テンプレートも保存でき、組み込みのものと並びます。
+                </p>
+              </div>
+            </article>
+
+            <article class="feat feat-wide">
+              <div class="shot">
+                <div class="s-row">
+                  <span class="s-chip">OpenAI</span>
+                  <span class="s-chip">Claude</span>
+                  <span class="s-chip">Gemini</span>
+                  <span class="s-chip">Qwen</span>
+                  <span class="s-chip">Volcengine</span>
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>独自 API を持ち込む</h3>
+                <p>
+                  ImgPrompt を OpenAI 互換の任意のエンドポイントに向けられます。
+                  キーはブラウザに保存され、外部に送信されません。クレジットが切れたら自分のキーに切り替わります。
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="pricing">
+        <div class="shell">
+          <div class="section-head reveal">
+            <h2>まずは無料で。<br />足りなくなったら追加。</h2>
+            <p class="lede">
+              登録で 10 回、毎日 3 回が追加されます。それを使い切ったときだけクレジットを購入してください。
+            </p>
+          </div>
+
+          <div class="price-free reveal">
+            <div class="price-free-copy">
+              <h3>無料 — 登録で 10 回、毎日 +3 回</h3>
+              <p>
+                メールアドレスでログインすると、最初の 10 回の解析はこちらで負担します。
+                1 日 1 回チェックインすると 3 回が追加されます。毎日のクレジットは日付が変わると
+                リセットされるので、その日のうちに使いましょう。
+              </p>
+            </div>
+            <a
+              class="btn btn-primary"
+              href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+              target="_blank"
+              rel="noopener"
+            >
+              <span class="chrome-glyph" aria-hidden="true"></span>
+              chrome に追加
+            </a>
+          </div>
+
+          <div class="price-grid reveal">
+            <article class="price">
+              <h3>80 クレジット</h3>
+              <div class="price-num"><span class="cur">$</span>1</div>
+              <p class="price-per">画像解析 80 回</p>
+              <ul class="price-list">
+                <li>1 回の解析にクレジット 1</li>
+                <li>3 種類の出力を 1 回で</li>
+              </ul>
+              <a
+                class="btn btn-ghost price-btn"
+                href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+                target="_blank"
+                rel="noopener"
+                >インストールして購入</a
+              >
+            </article>
+
+            <article class="price" data-featured="true">
+              <span class="price-badge">いちばん人気</span>
+              <h3>250 クレジット</h3>
+              <div class="price-num"><span class="cur">$</span>3</div>
+              <p class="price-per">画像解析 250 回</p>
+              <ul class="price-list">
+                <li>1 回の解析にクレジット 1</li>
+                <li>1 枚あたり約 1.2 セント</li>
+              </ul>
+              <a
+                class="btn btn-primary price-btn"
+                href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+                target="_blank"
+                rel="noopener"
+                >インストールして購入</a
+              >
+            </article>
+
+            <article class="price">
+              <h3>600 クレジット</h3>
+              <div class="price-num"><span class="cur">$</span>7</div>
+              <p class="price-per">画像解析 600 回</p>
+              <ul class="price-list">
+                <li>1 回の解析にクレジット 1</li>
+                <li>1 枚あたり最安</li>
+              </ul>
+              <a
+                class="btn btn-ghost price-btn"
+                href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+                target="_blank"
+                rel="noopener"
+                >インストールして購入</a
+              >
+            </article>
+          </div>
+
+          <p class="price-fine">
+            クレジット 1 = 画像解析 1 回。パックはログイン後に拡張機能の中で購入し、
+            決済は Dodo Payments が処理します。購入したクレジットは別枠で管理されるため、
+            毎日のチェックインでリセットされることはありません。自分のキーを使いたい場合は、
+            独自 API モードならクレジットを消費しません。
+          </p>
+        </div>
+      </section>
+
+      <section class="section" id="faq">
+        <div class="shell">
+          <div class="section-head reveal">
+            <h2>疑問には、答えを。</h2>
+            <p class="lede">インストール前に知っておきたいことをまとめました。</p>
+          </div>
+
+          <div class="faq reveal">
+            <details class="qa">
+              <summary>
+                <span class="q">使うのに API キーは必要ですか？</span>
+                <span class="caret" aria-hidden="true"></span>
+              </summary>
+              <div class="qa-body">
+                いいえ。登録すると無料クレジットが付き、毎日のチェックインでも追加されるので、
+                インストール直後から解析できます。キーが必要になるのは、クレジットを使い切ったとき、
+                または自分のモデルを使いたいときだけです。
+              </div>
+            </details>
+
+            <details class="qa">
+              <summary>
+                <span class="q">API キーはどこかに送信されますか？</span>
+                <span class="caret" aria-hidden="true"></span>
+              </summary>
+              <div class="qa-body">
+                独自のキーはブラウザ内に保存され、サーバーへ同期されません。公式クレジットを使う場合、
+                画像は ImgPrompt の解析サービスへ送られます。独自 API を使う場合は、
+                設定したエンドポイントへ直接送られます。
+              </div>
+            </details>
+
+            <details class="qa">
+              <summary>
+                <span class="q">どの生成ツールで使えますか？</span>
+                <span class="caret" aria-hidden="true"></span>
+              </summary>
+              <div class="qa-body">
+                2 種類のプロンプトは、ChatGPT、Gemini などの対話型画像モデルでも、
+                Midjourney、Stable Diffusion、Flux、即梦、豆包、通义万相 でもそのまま使えます。
+                JSON 出力は構造化した保存や自動処理に向きます。
+              </div>
+            </details>
+
+            <details class="qa">
+              <summary>
+                <span class="q">ショートカットは何ですか？変更できますか？</span>
+                <span class="caret" aria-hidden="true"></span>
+              </summary>
+              <div class="qa-body">
+                既定は <kbd>Alt</kbd> / <kbd>Option</kbd> + <kbd>S</kbd> です。
+                変更するには <code>chrome://extensions/shortcuts</code> を開き、
+                そこでショートカットを設定し直してください。
+              </div>
+            </details>
+
+            <details class="qa">
+              <summary>
+                <span class="q">どのサイトでも動きますか？</span>
+                <span class="caret" aria-hidden="true"></span>
+              </summary>
+              <div class="qa-body">
+                はい。Chrome が拡張機能の実行を許可しているページなら、どこでもパネルが開きます。
+                ローカルファイルをそのままドロップしても解析できます。Chrome のストアページと
+                新しいタブページは、通常の例外です。
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="shell">
+          <div class="cta reveal">
+            <span class="tag">インストールは無料</span>
+            <h2>他人のプロンプトを当て推量するのは、もう終わり。</h2>
+            <p>
+              登録でクレジット、API キー不要、生成タブ間のコピペも不要です。
+            </p>
+            <a
+              class="btn btn-primary"
+              href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+              target="_blank"
+              rel="noopener"
+            >
+              <span class="chrome-glyph" aria-hidden="true"></span>
+              chrome に追加
+            </a>
+            <span class="fine">Chrome と Chromium 系ブラウザで動作します</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="shell">
+        <div class="foot-top">
+          <div class="foot-brand">
+            <a class="brand" href="./">
+              <img src="../assets/icon48.png" alt="ImgPrompt アイコン" width="22" height="22" />
+              <span class="brand-word">ImgPrompt</span>
+            </a>
+            <p>画像からプロンプトへ。参考画像を、そのまま使えるプロンプトに変えます。</p>
+          </div>
+
+          <div class="foot-links">
+            <a href="#capabilities">機能</a>
+            <a href="#faq">よくある質問</a>
+            <a
+              href="https://imgdev.notion.site/ImgPrompt-Custom-API-Setup-Guide-34ac7b4f4e24806f8f33f0667fe87bc4?source=copy_link"
+              target="_blank"
+              rel="noopener"
+              >独自 API の設定ガイド</a
+            >
+            <a
+              href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+              target="_blank"
+              rel="noopener"
+              >Chrome ウェブストア</a
+            >
+            <a href="../zh/" hreflang="zh-CN">中文</a>
+            <a href="../" hreflang="en">English</a>
+            <a href="../es/" hreflang="es">Español</a>
+            <a href="mailto:ooooop2011@gmail.com">お問い合わせ</a>
+          </div>
+        </div>
+
+        <div class="foot-bottom">
+          <span>© 2026 ImgPrompt · 画像からプロンプト</span>
+          <span>v1.0.10</span>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      /* 语言菜单：点按钮展开，点外部或按 Esc 收起；点了语言就记下"手动选择"，不再自动跳站 */
+      (function () {
+        var wrap = document.querySelector(".lang");
+        if (!wrap) return;
+        var btn = wrap.querySelector(".lang-btn");
+        var menu = wrap.querySelector(".lang-menu");
+
+        function setOpen(open) {
+          wrap.setAttribute("data-open", open ? "true" : "false");
+          btn.setAttribute("aria-expanded", open ? "true" : "false");
+          if (open) menu.removeAttribute("hidden");
+          else menu.setAttribute("hidden", "");
+        }
+
+        btn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          setOpen(wrap.getAttribute("data-open") !== "true");
+        });
+
+        document.addEventListener("click", function (e) {
+          if (!wrap.contains(e.target)) setOpen(false);
+        });
+
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && wrap.getAttribute("data-open") === "true") {
+            setOpen(false);
+            btn.focus();
+          }
+        });
+
+        menu.addEventListener("click", function (e) {
+          if (e.target.closest("a")) {
+            try {
+              localStorage.setItem("imgprompt-lang", "manual");
+            } catch (err) {}
+          }
+        });
+      })();
+
+      (function () {
+        var els = document.querySelectorAll(".reveal");
+        if (!("IntersectionObserver" in window)) {
+          els.forEach(function (el) {
+            el.classList.add("in");
+          });
+          return;
+        }
+        var io = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (e) {
+              if (e.isIntersecting) {
+                e.target.classList.add("in");
+                io.unobserve(e.target);
+              }
+            });
+          },
+          { rootMargin: "0px 0px -6% 0px", threshold: 0.06 }
+        );
+        els.forEach(function (el, i) {
+          el.style.transitionDelay = Math.min(i % 5, 4) * 50 + "ms";
+          io.observe(el);
+        });
+      })();
+
+      /* ヒーロー動画：画面外では停止して省電力。動きを減らす設定ではポスターのみ表示 */
+      (function () {
+        var v = document.querySelector(".hero-media");
+        if (!v) return;
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          v.removeAttribute("autoplay");
+          v.pause();
+          return;
+        }
+        if (!("IntersectionObserver" in window)) return;
+        new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) {
+              var p = v.play();
+              if (p && p.catch) p.catch(function () {});
+            } else {
+              v.pause();
+            }
+          });
+        }, { threshold: 0.25 }).observe(v);
+      })();
+    </script>
+  </body>
+</html>

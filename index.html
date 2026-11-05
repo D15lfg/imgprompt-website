@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      /* 首次访问按浏览器语言选站：中文→/zh/、日文→/ja/、西语→/es/，其余一律英文。
+         用户手动点过语言后就记下来，不再自动跳转。 */
+      (function () {
+        document.documentElement.classList.add("js");
+        try {
+          if (localStorage.getItem("imgprompt-lang") === "manual") return;
+        } catch (e) {}
+        // 站内跳转（点语言按钮、点页脚链接）尊重用户选择，不自动改回
+        var ref = document.referrer;
+        if (ref && ref.indexOf(location.origin + "/") === 0) return;
+        var PATHS = {"en": "./", "zh": "zh/", "ja": "ja/", "es": "es/"};
+        var CURRENT = "en";
+        // 只有英文根页做自动跳转。/zh/ /ja/ /es/ 永远直接返回自己的内容：
+        // Googlebot 的语言是 en-US，若子页也跳，它抓这三页时会被弹回根页，
+        // 这三页就永远收录不了。
+        if (CURRENT !== "en") return;
+        var langs = navigator.languages || [navigator.language || ""];
+        var pick = "en";
+        for (var i = 0; i < langs.length; i++) {
+          var tag = String(langs[i]).toLowerCase();
+          if (tag.indexOf("zh") === 0) { pick = "zh"; break; }
+          if (tag.indexOf("ja") === 0) { pick = "ja"; break; }
+          if (tag.indexOf("es") === 0) { pick = "es"; break; }
+        }
+        if (PATHS[pick] === PATHS[CURRENT]) return;
+        var target = PATHS[pick] + location.hash;
+        location.replace(target);
+      })();
+    </script>
+
+    <title>ImgPrompt — Image to Prompt Chrome Extension</title>
+    <meta
+      name="description"
+      content="ImgPrompt turns any image into an AI art prompt. Right-click, drag or Alt+S for Chinese, English and JSON prompts at once. Free credits, no API key."
+    />
+    <meta
+      name="keywords"
+      content="image to prompt,image to prompt generator,AI art prompt,reverse image prompt,Midjourney prompt generator,Chrome extension,prompt from image,JSON image analysis"
+    />
+    <meta name="author" content="ImgPrompt" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#fbfbfb" />
+    <link rel="icon" type="image/png" href="assets/icon48.png" />
+    <link rel="apple-touch-icon" href="assets/icon128.png" />
+
+    <!-- Replace the placeholder domain after deployment, then uncomment -->
+    <!-- <link rel="canonical" href="https://your-domain.com/" /> -->
+    <link rel="alternate" hreflang="en" href="https://your-domain.com/" />
+    <link rel="alternate" hreflang="zh-CN" href="https://your-domain.com/zh/" />
+    <link rel="alternate" hreflang="ja" href="https://your-domain.com/ja/" />
+    <link rel="alternate" hreflang="es" href="https://your-domain.com/es/" />
+    <link rel="alternate" hreflang="x-default" href="https://your-domain.com/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ImgPrompt" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="zh_CN" />
+    <meta property="og:locale:alternate" content="ja_JP" />
+    <meta property="og:locale:alternate" content="es_ES" />
+    <meta property="og:url" content="https://your-domain.com/" />
+    <meta property="og:title" content="ImgPrompt — Turn any image into an AI art prompt" />
+    <meta
+      property="og:description"
+      content="Right-click, drag & drop, or press Alt+S. Get Chinese, English and JSON prompts in one shot. Free credits included."
+    />
+    <meta property="og:image" content="https://your-domain.com/assets/og-cover.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="ImgPrompt panel returning a structured JSON prompt for a Pinterest image" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ImgPrompt — Turn any image into an AI art prompt" />
+    <meta
+      name="twitter:description"
+      content="Chrome extension: image to prompt. Chinese / English / JSON output. Free credits included."
+    />
+    <meta name="twitter:image" content="https://your-domain.com/assets/og-cover.jpg" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/site.css" />
+
+        <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ImgPrompt",
+  "alternateName": "ImgPrompt - Image to Prompt",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Chrome",
+  "description": "ImgPrompt is a Chrome extension that analyzes web images, local images or selected screenshot regions and generates Chinese, English and structured JSON prompts.",
+  "url": "https://your-domain.com/",
+  "image": "https://your-domain.com/assets/og-cover.jpg",
+  "inLanguage": [
+    "zh-CN",
+    "en",
+    "ja",
+    "ko",
+    "es",
+    "pt",
+    "th",
+    "ru"
+  ],
+  "offers": {
+    "@type": "AggregateOffer",
+    "lowPrice": "0",
+    "highPrice": "7",
+    "priceCurrency": "USD",
+    "offerCount": "4",
+    "description": "Free credits on sign-up, plus daily check-in credits. Credit packs from $1 to $7."
+  },
+  "featureList": [
+    "Image to prompt analysis",
+    "Chinese / English / JSON output",
+    "Alt+S region capture",
+    "Drag and drop analysis",
+    "Task queue (up to 5 images)",
+    "Prompt manager with Markdown export",
+    "Custom OpenAI-compatible API"
+  ],
+  "screenshot": "https://your-domain.com/assets/og-cover.jpg"
+}
+    </script>
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "inLanguage": "en",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Do I need an API key to use it?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Free credits arrive on sign-up and more come from daily check-in, so analysis works right after install. You only need a key when credits run out or when you want your own model."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is my API key uploaded anywhere?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Custom keys stay in your local browser and never sync to a server. With official credits, images go to the ImgPrompt analysis service. With a custom API, requests go directly to the endpoint you configured."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which generators does it work with?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Both prompts work as written in ChatGPT, Gemini and other chat-based image models, and in Midjourney, Stable Diffusion, Flux, 即梦, 豆包 and 通义万相. The JSON output fits structured archiving or automated pipelines."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the shortcut? Can I change it?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Default is Alt / Option + S. To rebind, open chrome://extensions/shortcuts and change the shortcut there."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does it work on any website?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. The panel opens on any page where Chrome lets extensions run, and it also accepts local files dropped straight into it. Chrome's own store pages and the new-tab page are the usual exceptions."
+      }
+    }
+  ]
+}
+    </script>
+  </head>
+
+  <body>
+    <div class="nav-wrap">
+      <header class="nav">
+        <a class="brand" href="./" aria-label="ImgPrompt home">
+          <img src="assets/icon48.png" alt="ImgPrompt icon" width="22" height="22" />
+          <span class="brand-word">ImgPrompt</span>
+        </a>
+
+        <nav class="nav-links" aria-label="Main navigation">
+          <a href="#capabilities">Capabilities</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+
+        <div class="nav-right">
+          <div class="lang" data-open="false">
+            <button
+              class="lang-btn"
+              type="button"
+              aria-expanded="false"
+              aria-controls="lang-menu"
+              aria-label="Language: English. Change language"
+            >
+              <span class="lang-current">EN</span>
+              <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" /></svg>
+            </button>
+            <ul class="lang-menu" id="lang-menu" hidden>
+              <li><a href="./" hreflang="en" lang="en" aria-current="page">English</a></li>
+              <li><a href="zh/" hreflang="zh-CN" lang="zh-CN">中文</a></li>
+              <li><a href="ja/" hreflang="ja" lang="ja">日本語</a></li>
+              <li><a href="es/" hreflang="es" lang="es">Español</a></li>
+            </ul>
+          </div>
+          <a
+            class="nav-store"
+            aria-label="Get ImgPrompt from the Chrome Web Store"
+            href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+            target="_blank"
+            rel="noopener"
+          >
+            <span class="chrome-glyph" aria-hidden="true"></span>
+            <span class="store-label">Get ImgPrompt</span>
+          </a>
+        </div>
+      </header>
+    </div>
+
+    <main>
+      <section class="hero">
+        <div class="shell hero-inner">
+          <span class="eyebrow">
+            <span class="dot" aria-hidden="true"></span>
+            Chrome extension · 600+ creators installed
+          </span>
+
+          <h1>
+            Turn any image into<br />
+            its <span class="hl">prompt</span>. In one click.
+          </h1>
+
+          <p class="lede">
+            ImgPrompt reads subject, composition, lighting, palette and style
+            from any picture, then hands back Chinese, English and structured JSON
+            prompts at once. Paste them into ChatGPT, Gemini, or any image model.
+          </p>
+
+          <div class="hero-actions">
+            <a
+              class="btn btn-primary"
+              href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+              target="_blank"
+              rel="noopener"
+            >
+              <span class="chrome-glyph" aria-hidden="true"></span>
+              add to chrome
+            </a>
+            <a class="btn btn-ghost" href="#capabilities">see how it works</a>
+          </div>
+
+          <div class="hero-notes">
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+              Free credits on sign-up
+            </span>
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+              No API key required
+            </span>
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+              Keys stay local
+            </span>
+          </div>
+        </div>
+
+        <div class="stage">
+          <div class="stage-glow" aria-hidden="true"></div>
+
+          <div class="hero-demo">
+            <video
+              class="hero-media"
+              src="assets/hero-demo.mp4"
+              poster="assets/hero-poster.jpg"
+              width="1920"
+              height="1108"
+              autoplay
+              muted
+              loop
+              playsinline
+              preload="metadata"
+              aria-label="ImgPrompt analyzing a Pinterest image and returning Chinese, English and JSON prompts in the panel"
+            ></video>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="capabilities">
+        <div class="shell">
+          <div class="section-head reveal">
+            <h2>Everything a prompt<br />is made of.</h2>
+            <p class="lede">
+              Open ImgPrompt on any picture and read it like a shot list.
+            </p>
+          </div>
+
+          <div class="feat-grid reveal">
+            <article class="feat">
+              <div class="shot">
+                <div class="s-row">
+                  <span class="s-chip" data-on="true">Right-click</span>
+                  <span class="s-chip">Drag &amp; drop</span>
+                  <span class="s-chip">Alt + S</span>
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>Three ways in</h3>
+                <p>Image menu, a dropped file, or a box drawn on screen. All three land in the same panel.</p>
+              </div>
+            </article>
+
+            <article class="feat">
+              <div class="shot">
+                <div class="s-row">
+                  <span class="s-chip"><i class="s-dot cyan"></i>CN</span>
+                  <span class="s-chip"><i class="s-dot amber"></i>EN</span>
+                  <span class="s-chip"><i class="s-dot pink"></i>JSON</span>
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>Three prompts, one pass</h3>
+                <p>Chinese or English, ready for ChatGPT, Gemini, Midjourney, Flux or any image model. JSON for pipelines.</p>
+              </div>
+            </article>
+
+            <article class="feat">
+              <div class="shot">
+                <div class="s-field">
+                  <span class="s-field-text">change the subject to a white cat</span>
+                  <span class="caret" aria-hidden="true"></span>
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>Refine in one line</h3>
+                <p>Write what to change. All three prompts rewrite together, no re-analysis.</p>
+              </div>
+            </article>
+
+            <article class="feat">
+              <div class="shot">
+                <div class="s-stack">
+                  <span class="s-thumb"></span>
+                  <span class="s-thumb"></span>
+                  <span class="s-thumb"></span>
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>Task queue</h3>
+                <p>Queue up to five images. The next starts on its own, so a batch needs no supervision.</p>
+              </div>
+            </article>
+
+            <article class="feat">
+              <div class="shot">
+                <div class="s-doc">
+                  <b># References</b><br />
+                  - orange tabby, backlit, film grain<br />
+                  - toy character, flat vector, cel shading
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>Prompt manager</h3>
+                <p>Every result is saved with a thumbnail and source link. Filter by time, export to Markdown.</p>
+              </div>
+            </article>
+
+            <article class="feat">
+              <div class="shot">
+                <div class="s-langs">
+                  <b>English</b> · 中文 · 日本語<br />
+                  한국어 · Español · Русский
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>8 UI languages</h3>
+                <p>The interface and the prompts follow the language you pick in settings.</p>
+              </div>
+            </article>
+
+            <article class="feat feat-wide">
+              <div class="shot">
+                <div class="s-doc" style="max-width: 320px">
+                  <b>--accent:</b> #8bd3ff<br />
+                  <b>--radius:</b> 22px<br />
+                  <b>--style:</b> "flat vector, cel shading"
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>A prompt you can reuse</h3>
+                <p>
+                  Seven scene presets cover general, photography, illustration, graphic
+                  design, UI, game assets and product shots. Save your own templates and
+                  they show up next to the built-in ones.
+                </p>
+              </div>
+            </article>
+
+            <article class="feat feat-wide">
+              <div class="shot">
+                <div class="s-row">
+                  <span class="s-chip">OpenAI</span>
+                  <span class="s-chip">Claude</span>
+                  <span class="s-chip">Gemini</span>
+                  <span class="s-chip">Qwen</span>
+                  <span class="s-chip">Volcengine</span>
+                </div>
+              </div>
+              <div class="feat-copy">
+                <h3>Bring your own API</h3>
+                <p>
+                  Point ImgPrompt at any OpenAI-compatible endpoint. Keys are stored in
+                  your browser and never uploaded. When credits run out, your key takes over.
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="pricing">
+        <div class="shell">
+          <div class="section-head reveal">
+            <h2>Start free.<br />Top up when you need more.</h2>
+            <p class="lede">
+              Ten analyses on sign-up, three more every day. Buy credits only
+              when you run past that.
+            </p>
+          </div>
+
+          <div class="price-free reveal">
+            <div class="price-free-copy">
+              <h3>Free — 10 calls on sign-up, +3 every day</h3>
+              <p>
+                Sign in with an email address and the first ten analyses are on
+                us. Check in once a day for three more. Daily credits reset each
+                day, so use them before midnight.
+              </p>
+            </div>
+            <a
+              class="btn btn-primary"
+              href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+              target="_blank"
+              rel="noopener"
+            >
+              <span class="chrome-glyph" aria-hidden="true"></span>
+              add to chrome
+            </a>
+          </div>
+
+          <div class="price-grid reveal">
+            <article class="price">
+              <h3>80 credits</h3>
+              <div class="price-num"><span class="cur">$</span>1</div>
+              <p class="price-per">80 image analyses</p>
+              <ul class="price-list">
+                <li>One credit per analysis</li>
+                <li>All three outputs in one pass</li>
+              </ul>
+              <a
+                class="btn btn-ghost price-btn"
+                href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+                target="_blank"
+                rel="noopener"
+                >Install to buy</a
+              >
+            </article>
+
+            <article class="price" data-featured="true">
+              <span class="price-badge">Most picked</span>
+              <h3>250 credits</h3>
+              <div class="price-num"><span class="cur">$</span>3</div>
+              <p class="price-per">250 image analyses</p>
+              <ul class="price-list">
+                <li>One credit per analysis</li>
+                <li>About 1.2¢ per image</li>
+              </ul>
+              <a
+                class="btn btn-primary price-btn"
+                href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+                target="_blank"
+                rel="noopener"
+                >Install to buy</a
+              >
+            </article>
+
+            <article class="price">
+              <h3>600 credits</h3>
+              <div class="price-num"><span class="cur">$</span>7</div>
+              <p class="price-per">600 image analyses</p>
+              <ul class="price-list">
+                <li>One credit per analysis</li>
+                <li>Lowest cost per image</li>
+              </ul>
+              <a
+                class="btn btn-ghost price-btn"
+                href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+                target="_blank"
+                rel="noopener"
+                >Install to buy</a
+              >
+            </article>
+          </div>
+
+          <p class="price-fine">
+            One credit = one image analysis. Packs are purchased inside the
+            extension after sign-in, and payment is handled by Dodo Payments.
+            Purchased credits sit in a separate balance, so the daily check-in
+            never resets them. Prefer your own key? Custom API mode skips credits
+            completely.
+          </p>
+        </div>
+      </section>
+
+      <section class="section" id="faq">
+        <div class="shell">
+          <div class="section-head reveal">
+            <h2>Questions? Answers.</h2>
+            <p class="lede">Everything you need to know before you install.</p>
+          </div>
+
+          <div class="faq reveal">
+            <details class="qa">
+              <summary>
+                <span class="q">Do I need an API key to use it?</span>
+                <span class="caret" aria-hidden="true"></span>
+              </summary>
+              <div class="qa-body">
+                No. Free credits arrive on sign-up and more come from daily
+                check-in, so analysis works right after install. You only need a
+                key when credits run out or when you want your own model.
+              </div>
+            </details>
+
+            <details class="qa">
+              <summary>
+                <span class="q">Is my API key uploaded anywhere?</span>
+                <span class="caret" aria-hidden="true"></span>
+              </summary>
+              <div class="qa-body">
+                Custom keys stay in your local browser and never sync to a
+                server. With official credits, images go to the ImgPrompt
+                analysis service. With a custom API, requests go directly to the
+                endpoint you configured.
+              </div>
+            </details>
+
+            <details class="qa">
+              <summary>
+                <span class="q">Which generators does it work with?</span>
+                <span class="caret" aria-hidden="true"></span>
+              </summary>
+              <div class="qa-body">
+                Both prompts work as written in ChatGPT, Gemini and other chat-based
+                image models, and in Midjourney, Stable Diffusion, Flux, 即梦, 豆包
+                and 通义万相. The JSON output fits structured archiving or
+                automated pipelines.
+              </div>
+            </details>
+
+            <details class="qa">
+              <summary>
+                <span class="q">What is the shortcut? Can I change it?</span>
+                <span class="caret" aria-hidden="true"></span>
+              </summary>
+              <div class="qa-body">
+                Default is <kbd>Alt</kbd> / <kbd>Option</kbd> + <kbd>S</kbd>.
+                To rebind, open <code>chrome://extensions/shortcuts</code> and
+                change the shortcut there.
+              </div>
+            </details>
+
+            <details class="qa">
+              <summary>
+                <span class="q">Does it work on any website?</span>
+                <span class="caret" aria-hidden="true"></span>
+              </summary>
+              <div class="qa-body">
+                Yes. The panel opens on any page where Chrome lets extensions
+                run, and it also accepts local files dropped straight into it.
+                Chrome's own store pages and the new-tab page are the usual
+                exceptions.
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="shell">
+          <div class="cta reveal">
+            <span class="tag">Free to install</span>
+            <h2>Stop guessing at other people's prompts.</h2>
+            <p>
+              Credits on sign-up, no API key, and no copy-pasting between
+              generator tabs.
+            </p>
+            <a
+              class="btn btn-primary"
+              href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+              target="_blank"
+              rel="noopener"
+            >
+              <span class="chrome-glyph" aria-hidden="true"></span>
+              add to chrome
+            </a>
+            <span class="fine">Works on Chrome and Chromium-based browsers</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="shell">
+        <div class="foot-top">
+          <div class="foot-brand">
+            <a class="brand" href="./">
+              <img src="assets/icon48.png" alt="ImgPrompt icon" width="22" height="22" />
+              <span class="brand-word">ImgPrompt</span>
+            </a>
+            <p>Image to prompt. Turn references into prompts you can actually use.</p>
+          </div>
+
+          <div class="foot-links">
+            <a href="#capabilities">Capabilities</a>
+            <a href="#faq">FAQ</a>
+            <a
+              href="https://imgdev.notion.site/ImgPrompt-Custom-API-Setup-Guide-34ac7b4f4e24806f8f33f0667fe87bc4?source=copy_link"
+              target="_blank"
+              rel="noopener"
+              >Custom API guide</a
+            >
+            <a
+              href="https://chromewebstore.google.com/detail/imgprompt-ai-image-to-pro/bhgmhaiimnaionifidnajpaallbaadge"
+              target="_blank"
+              rel="noopener"
+              >Chrome Web Store</a
+            >
+            <a href="zh/" hreflang="zh-CN">中文</a>
+            <a href="ja/" hreflang="ja">日本語</a>
+            <a href="es/" hreflang="es">Español</a>
+            <a href="mailto:ooooop2011@gmail.com">Contact</a>
+          </div>
+        </div>
+
+        <div class="foot-bottom">
+          <span>© 2026 ImgPrompt · Image to prompt</span>
+          <span>v1.0.10</span>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      /* 语言菜单：点按钮展开，点外部或按 Esc 收起；点了语言就记下"手动选择"，不再自动跳站 */
+      (function () {
+        var wrap = document.querySelector(".lang");
+        if (!wrap) return;
+        var btn = wrap.querySelector(".lang-btn");
+        var menu = wrap.querySelector(".lang-menu");
+
+        function setOpen(open) {
+          wrap.setAttribute("data-open", open ? "true" : "false");
+          btn.setAttribute("aria-expanded", open ? "true" : "false");
+          if (open) menu.removeAttribute("hidden");
+          else menu.setAttribute("hidden", "");
+        }
+
+        btn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          setOpen(wrap.getAttribute("data-open") !== "true");
+        });
+
+        document.addEventListener("click", function (e) {
+          if (!wrap.contains(e.target)) setOpen(false);
+        });
+
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && wrap.getAttribute("data-open") === "true") {
+            setOpen(false);
+            btn.focus();
+          }
+        });
+
+        menu.addEventListener("click", function (e) {
+          if (e.target.closest("a")) {
+            try {
+              localStorage.setItem("imgprompt-lang", "manual");
+            } catch (err) {}
+          }
+        });
+      })();
+
+      (function () {
+        var els = document.querySelectorAll(".reveal");
+        if (!("IntersectionObserver" in window)) {
+          els.forEach(function (el) {
+            el.classList.add("in");
+          });
+          return;
+        }
+        var io = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (e) {
+              if (e.isIntersecting) {
+                e.target.classList.add("in");
+                io.unobserve(e.target);
+              }
+            });
+          },
+          { rootMargin: "0px 0px -6% 0px", threshold: 0.06 }
+        );
+        els.forEach(function (el, i) {
+          el.style.transitionDelay = Math.min(i % 5, 4) * 50 + "ms";
+          io.observe(el);
+        });
+      })();
+
+      /* 首屏视频：离开视口就暂停省电；用户要求减少动效时只留封面帧 */
+      (function () {
+        var v = document.querySelector(".hero-media");
+        if (!v) return;
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          v.removeAttribute("autoplay");
+          v.pause();
+          return;
+        }
+        if (!("IntersectionObserver" in window)) return;
+        new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) {
+              var p = v.play();
+              if (p && p.catch) p.catch(function () {});
+            } else {
+              v.pause();
+            }
+          });
+        }, { threshold: 0.25 }).observe(v);
+      })();
+    </script>
+  </body>
+</html>
