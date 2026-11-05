@@ -183,17 +183,28 @@ CSS 里已有的语言分叉：
 
 价格区块四页统一用美元（`$1 / $3 / $7`），只有中文站写人民币（`¥7 / ¥21 / ¥50`），数值取自 `config.js` 的 `priceLabels`。
 
-## 上线前必须改的 2 处
+## 当前部署
+
+线上地址：**https://d15lfg.github.io/imgprompt-website/**
+
+托管在 GitHub Pages，源为 `main` 分支根目录，无需构建。四页均可直接访问：
+
+- 英文 `https://d15lfg.github.io/imgprompt-website/`
+- 中文 `https://d15lfg.github.io/imgprompt-website/zh/`
+- 日文 `https://d15lfg.github.io/imgprompt-website/ja/`
+- 西语 `https://d15lfg.github.io/imgprompt-website/es/`
+
+canonical、hreflang、og、JSON-LD、`sitemap.xml`、`robots.txt` 里的域名已全部指向该地址。
+
+### 换域名时
 
 ```bash
-cd website
-# 1. 替换占位域名
-grep -rl "your-domain.com" . | xargs sed -i '' 's#https://your-domain.com#https://真实域名#g'
-# 2. 取消 canonical 注释（手动改，四个文件各一处）
-grep -n "canonical" index.html zh/index.html ja/index.html es/index.html
+# 一次性替换所有绝对 URL
+grep -rl "d15lfg.github.io/imgprompt-website" . | xargs sed -i '' \
+  's#https://d15lfg.github.io/imgprompt-website#https://新域名#g'
 ```
 
-hreflang、og、结构化数据里的域名会随第 1 步一起替换。
+改完要同步更新 `sitemap.xml` 的 `lastmod`。
 
 ## 部署
 
@@ -240,9 +251,8 @@ node -e '...'   # 见 git 历史或直接对照上面的规则
 
 以下三项必须在部署时处理，代码里改不了：
 
-1. **替换占位域名** `your-domain.com`（四页 + `sitemap.xml` + `robots.txt` + 两处 JSON-LD）
-2. **取消 canonical 注释**（四页各一处，`grep -n canonical index.html zh/index.html ja/index.html es/index.html`）
-3. **提交收录**：Google Search Console / Bing Webmaster / 百度搜索资源平台，各提交一次 `sitemap.xml`
+1. **提交收录**：Google Search Console / Bing Webmaster / 百度搜索资源平台，各提交一次 `https://d15lfg.github.io/imgprompt-website/sitemap.xml`
+2. 绑定自定义域名后，按上面「换域名时」一节替换全部绝对 URL
 
 可选优化（不影响收录，只影响点击率）：
 
