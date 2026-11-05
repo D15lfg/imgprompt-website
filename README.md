@@ -17,6 +17,11 @@ website/
 │   └── icon128.png     favicon
 ├── robots.txt
 ├── sitemap.xml
+├── 23e25fbf9a0a4edab78a7d62eabdeb2f.txt   IndexNow 验证文件（必须公开可访问，勿删）
+├── wrangler.jsonc      Cloudflare Workers 部署配置
+├── worker.js           视频 Range 补丁
+├── .assetsignore       不上传到 Cloudflare 的文件清单
+├── .gitignore          不进 Git 的文件清单
 └── README.md
 ```
 
@@ -265,10 +270,29 @@ grep -rl "imgprompt.dev" . | xargs sed -i '' \
 
 ## 收录提交
 
-1. Google Search Console → 验证站点 → 提交 `https://imgprompt.dev/sitemap.xml`
-2. Bing Webmaster Tools → 同样提交
-3. 百度搜索资源平台 → 可选。大陆用户不是主要目标，且站点在大陆访问慢
-4. 上线后到 Chrome 商店开发者后台，把官网地址 `https://imgprompt.dev` 填进扩展详情的「Website」字段
+### 已完成（2026-11-05）
+
+**IndexNow** —— Bing、Yandex、Seznam 等走这个协议，不用账号，提交即生效。
+
+- 验证文件 `23e25fbf9a0a4edab78a7d62eabdeb2f.txt` 在站点根目录，**必须公开可访问，不要加进 `.assetsignore`**
+- 提交了四个 URL：`/`、`/zh/`、`/ja/`、`/es/`
+- 结果：`api.indexnow.org` 202、`www.bing.com/indexnow` 200、`yandex.com/indexnow` 202
+
+内容更新后重提：
+
+```bash
+KEY=23e25fbf9a0a4edab78a7d62eabdeb2f
+curl -sS -o /dev/null -w "%{http_code}\n" -X POST https://api.indexnow.org/indexnow \
+  -H "Content-Type: application/json; charset=utf-8" \
+  -d "{\"host\":\"imgprompt.dev\",\"key\":\"$KEY\",\"keyLocation\":\"https://imgprompt.dev/$KEY.txt\",\"urlList\":[\"https://imgprompt.dev/\",\"https://imgprompt.dev/zh/\",\"https://imgprompt.dev/ja/\",\"https://imgprompt.dev/es/\"]}"
+```
+
+### 需要手动做
+
+1. **Google Search Console** → 添加 `imgprompt.dev` → 验证（DNS 方式最简单，域名已在 Cloudflare）→ 提交 `https://imgprompt.dev/sitemap.xml`
+2. **Bing Webmaster Tools** → 添加站点 → 提交 sitemap（IndexNow 已提交 URL，但 sitemap 仍要单独提）
+3. **百度搜索资源平台** → 可选。大陆用户不是主要目标，且站点在大陆访问慢
+4. **Chrome 商店后台** → 扩展详情的「Website」字段填 `https://imgprompt.dev`
 
 域名刚注册（2026-11-05），Google 对新域名有观察期，收录通常要 2–6 周。提交后不必反复重提。
 
