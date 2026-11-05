@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
 
-# 部署后把 Sitemap 指向真实域名
-Sitemap: https://your-domain.com/sitemap.xml
+Sitemap: https://d15lfg.github.io/imgprompt-website/sitemap.xml
