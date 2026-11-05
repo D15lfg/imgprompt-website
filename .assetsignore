@@ -1,0 +1,13 @@
+# 这些文件不上传到 Cloudflare，只留在仓库里
+README.md
+wrangler.jsonc
+wrangler.toml
+worker.js
+.assetsignore
+.gitignore
+node_modules
+# wrangler 自己生成的临时目录，在 assets 目录里会被误当成静态资源
+.wrangler
+**/.wrangler
+**/.DS_Store
+**/.git

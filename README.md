@@ -185,23 +185,71 @@ CSS 里已有的语言分叉：
 
 ## 当前部署
 
-线上地址：**https://d15lfg.github.io/imgprompt-website/**
+线上地址：**https://imgprompt.dev/**
 
-托管在 GitHub Pages，源为 `main` 分支根目录，无需构建。四页均可直接访问：
+托管在 **Cloudflare Workers 静态资源**，绑定自定义域名 `imgprompt.dev`，无构建步骤，配置见 `wrangler.jsonc`。四页均可直接访问：
 
-- 英文 `https://d15lfg.github.io/imgprompt-website/`
-- 中文 `https://d15lfg.github.io/imgprompt-website/zh/`
-- 日文 `https://d15lfg.github.io/imgprompt-website/ja/`
-- 西语 `https://d15lfg.github.io/imgprompt-website/es/`
+- 英文 `https://imgprompt.dev/`
+- 中文 `https://imgprompt.dev/zh/`
+- 日文 `https://imgprompt.dev/ja/`
+- 西语 `https://imgprompt.dev/es/`
 
 canonical、hreflang、og、JSON-LD、`sitemap.xml`、`robots.txt` 里的域名已全部指向该地址。
+
+### 域名
+
+`imgprompt.dev` 注册于 2026-11-05，注册局 Google（`.dev` 强制 HTTPS）。NS 在 Cloudflare：`sima.ns.cloudflare.com` / `simon.ns.cloudflare.com`。
+
+`wrangler.jsonc` 里用 `routes` + `custom_domain: true` 绑定。部署时 wrangler 自动创建域名记录并签发证书。
+
+绑定自定义域名后，`workers.dev` 子域会自动关闭（返回 404）。这是好事：少一个可被搜索引擎收录的重复地址。要保留就显式写 `"workers_dev": true`。
+
+### 大陆访问
+
+Cloudflare 全球网络不含大陆节点，大陆访客由境外节点服务，首屏 3–8 秒，偶发失败。本站主要面向海外用户，接受这个代价。
+
+`workers.dev` 这个域名模式在大陆被封锁（GreatFire 实测 228 个 URL 中 212 个被封锁），换成自定义域名后脱离该黑名单，但跨境链路本身的问题仍在。
+
+### 为什么是 Workers 不是 Pages
+
+Cloudflare 官方现在推荐新项目用 Workers 静态资源，Pages 只保留兼容。两者对纯静态站没有功能差别，Workers 是长期方向。
+
+### 部署命令
+
+```bash
+cd website
+npx wrangler@4 deploy
+```
+
+首次要先 `npx wrangler@4 login`。
+
+### `worker.js` 只做一件事
+
+给首屏视频补 Range 支持。Workers 静态资源默认不支持 Range：收到 `Range` 头会返回 `200` + 整个文件，没有 `Content-Range`。Safari 播视频需要 `206`，不加这个 Worker 视频在 Safari 上播不了。
+
+`wrangler.jsonc` 里 `run_worker_first` 只列了 `/assets/hero-demo.mp4`。其余请求全部直接由静态资源返回，不计入 Worker 每日 10 万次请求额度。
+
+已验证：`Range: bytes=0-1023` 返回 `206` + `Content-Range: bytes 0-1023/2406569`；`bytes=-500` 返回尾部 500 字节。
+
+### 两份忽略文件的分工
+
+| 文件 | 作用 |
+|---|---|
+| `.assetsignore` | 不上传到 Cloudflare 的文件（`README.md`、`wrangler.jsonc`、`worker.js`、`.wrangler/`） |
+| `.gitignore` | 不进 Git 的文件（`.wrangler/`） |
+
+**注意**：`assets.directory` 是 `.`（站点根目录），所以 wrangler 自己生成的 `.wrangler/` 临时目录也在扫描范围内。第一次部署时它把 `no-op-worker.js` 当静态资源上传了。`.assetsignore` 里必须写 `.wrangler`，否则临时文件会被公开。
+
+### 不要加 `_headers` 设 Cache-Control
+
+试过，撤掉了。`_headers` 里的 `Cache-Control` 不会覆盖默认值，而是被拼接：实际返回 `public, max-age=0, must-revalidate, public, max-age=604800`。两个 `max-age` 并列，浏览器取哪个不确定。默认的 `max-age=0, must-revalidate` 配 ETag 已经够用：命中就 304，不重复下载正文。
 
 ### 换域名时
 
 ```bash
 # 一次性替换所有绝对 URL
-grep -rl "d15lfg.github.io/imgprompt-website" . | xargs sed -i '' \
-  's#https://d15lfg.github.io/imgprompt-website#https://新域名#g'
+grep -rl "imgprompt.dev" . | xargs sed -i '' \
+  's#https://imgprompt.dev#https://新域名#g'
 ```
 
 改完要同步更新 `sitemap.xml` 的 `lastmod`。
@@ -210,16 +258,19 @@ grep -rl "d15lfg.github.io/imgprompt-website" . | xargs sed -i '' \
 
 任意静态托管，无需构建：
 
-- **Cloudflare Pages**：上传 `website/`，根路径 `/`
-- **Vercel**：`vercel --prod`，Framework 选 Other，输出目录 `website`
-- **GitHub Pages**：推到 `gh-pages` 分支
+- **Cloudflare Workers**（当前）：`npx wrangler@4 deploy`，配置在 `wrangler.jsonc`
+- **Cloudflare Pages**：上传 `website/`，根路径 `/`。注意 Pages 对 Range 的支持与 Workers 不同，视频行为要重测
+- **Vercel**：`vercel --prod`，Framework 选 Other，输出目录 `website`。**免费版禁止商业用途**，这个站卖积分包，要用必须升 Pro
+- **GitHub Pages**：推到 `gh-pages` 分支。条款禁止把它当免费主机跑商业站，只允许捐赠和众筹
 
 ## 收录提交
 
-1. Google Search Console → 验证站点 → 提交 `sitemap.xml`
+1. Google Search Console → 验证站点 → 提交 `https://imgprompt.dev/sitemap.xml`
 2. Bing Webmaster Tools → 同样提交
-3. 百度搜索资源平台 → 中文用户为主，值得单独提交
-4. 上线后到 Chrome 商店开发者后台，把官网地址填进扩展详情的「Website」字段
+3. 百度搜索资源平台 → 可选。大陆用户不是主要目标，且站点在大陆访问慢
+4. 上线后到 Chrome 商店开发者后台，把官网地址 `https://imgprompt.dev` 填进扩展详情的「Website」字段
+
+域名刚注册（2026-11-05），Google 对新域名有观察期，收录通常要 2–6 周。提交后不必反复重提。
 
 ## 已内置的 SEO 项
 
@@ -249,13 +300,14 @@ node -e '...'   # 见 git 历史或直接对照上面的规则
 
 ## 待补
 
-以下三项必须在部署时处理，代码里改不了：
+以下两项必须在部署时处理，代码里改不了：
 
-1. **提交收录**：Google Search Console / Bing Webmaster / 百度搜索资源平台，各提交一次 `https://d15lfg.github.io/imgprompt-website/sitemap.xml`
-2. 绑定自定义域名后，按上面「换域名时」一节替换全部绝对 URL
+1. **提交收录**：Google Search Console / Bing Webmaster Tools，各提交一次 `https://imgprompt.dev/sitemap.xml`
+2. **填 Chrome 商店**：扩展详情页的「Website」字段改成 `https://imgprompt.dev`
 
 可选优化（不影响收录，只影响点击率）：
 
 - `twitter:site` / `twitter:creator` 留空，没有 X 账号时不必填
 - 首屏视频未加 `<link rel="preload">`，2.3 MB 在 4G 上首帧约 2–3 秒。加了会挤占首屏带宽，当前用 `poster` 先出图，权衡后没加
 - `sitemap.xml` 的 `lastmod` 是手写日期，改内容时记得同步
+- 大陆访问慢。要改善只能备案后单独部署国内云，见「大陆访问」一节

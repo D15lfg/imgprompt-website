@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://d15lfg.github.io/imgprompt-website/sitemap.xml
+Sitemap: https://imgprompt.dev/sitemap.xml

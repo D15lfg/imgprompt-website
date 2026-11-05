@@ -1,0 +1,29 @@
+// Cloudflare Workers 静态资源部署配置。纯静态站，无构建步骤。
+// 部署：npx wrangler deploy
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "imgprompt-website",
+  "compatibility_date": "2026-11-05",
+
+  // 自定义域名。域名必须先加入同一个 Cloudflare 账号（zone），部署时自动绑定。
+  // www 也要绑：手机浏览器访问 imgprompt.dev 时经常自动补 www，
+  // 不绑就会报 Error 1016（Origin DNS error）。
+  "routes": [
+    { "pattern": "imgprompt.dev", "custom_domain": true },
+    { "pattern": "www.imgprompt.dev", "custom_domain": true }
+  ],
+
+  // 只为了给首屏视频补 Range 支持（Workers 静态资源默认不支持 206，Safari 播不了）
+  "main": "worker.js",
+
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS",
+    // /zh/ 服务 zh/index.html，/ja/ 服务 ja/index.html（默认值，写出来是为了明确）
+    "html_handling": "auto-trailing-slash",
+    // 找不到文件时返回 404.html，状态码 404
+    "not_found_handling": "404-page",
+    // 只有视频走 Worker，其余全部直接由静态资源返回，不计入 Worker 请求额度
+    "run_worker_first": ["/assets/hero-demo.mp4"]
+  }
+}
