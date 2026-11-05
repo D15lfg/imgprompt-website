@@ -1,9 +1,23 @@
-/* 只做一件事：给首屏视频补上 Range 支持。
-   Workers 静态资源默认不支持 Range，收到 Range 头也返回 200 + 整个文件，
-   Safari 播视频需要 206。其余请求一律直接交给静态资源，不进 Worker。 */
+/* 只做两件事：
+   1. 给首屏视频补上 Range 支持。Workers 静态资源默认不支持 Range，
+      收到 Range 头也返回 200 + 整个文件，Safari 播视频需要 206。
+   2. 让 Google Search Console 的 HTML 验证文件按原路径返回 200。
+      静态资源会把 *.html 307 跳到去掉扩展名的地址，Google 验证要求
+      文件就在 /google5457b1908e9026ac.html 这个路径上。
+   其余请求一律直接交给静态资源，不进 Worker。 */
+const GSC_FILE = "/google5457b1908e9026ac.html";
+const GSC_BODY = "google-site-verification: google5457b1908e9026ac.html";
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    if (url.pathname === GSC_FILE) {
+      return new Response(GSC_BODY, {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
+    }
 
     if (url.pathname !== "/assets/hero-demo.mp4") {
       return env.ASSETS.fetch(request);

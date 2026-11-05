@@ -18,6 +18,7 @@ website/
 ├── robots.txt
 ├── sitemap.xml
 ├── 23e25fbf9a0a4edab78a7d62eabdeb2f.txt   IndexNow 验证文件（必须公开可访问，勿删）
+├── google5457b1908e9026ac.html  Google Search Console 验证文件（必须公开可访问，勿删）
 ├── wrangler.jsonc      Cloudflare Workers 部署配置
 ├── worker.js           视频 Range 补丁
 ├── .assetsignore       不上传到 Cloudflare 的文件清单
@@ -228,13 +229,15 @@ npx wrangler@4 deploy
 
 首次要先 `npx wrangler@4 login`。
 
-### `worker.js` 只做一件事
+### `worker.js` 只做两件事
 
-给首屏视频补 Range 支持。Workers 静态资源默认不支持 Range：收到 `Range` 头会返回 `200` + 整个文件，没有 `Content-Range`。Safari 播视频需要 `206`，不加这个 Worker 视频在 Safari 上播不了。
+**1. 给首屏视频补 Range 支持。** Workers 静态资源默认不支持 Range：收到 `Range` 头会返回 `200` + 整个文件，没有 `Content-Range`。Safari 播视频需要 `206`，不加这个 Worker 视频在 Safari 上播不了。
 
-`wrangler.jsonc` 里 `run_worker_first` 只列了 `/assets/hero-demo.mp4`。其余请求全部直接由静态资源返回，不计入 Worker 每日 10 万次请求额度。
+**2. 让 GSC 验证文件按原路径返回 200。** `html_handling: auto-trailing-slash` 会把 `/xxx.html` 307 跳到 `/xxx`，而 Google 要求验证文件就落在 `/google5457b1908e9026ac.html` 这个路径上。Worker 直接返回那 53 字节正文，状态 200。
 
-已验证：`Range: bytes=0-1023` 返回 `206` + `Content-Range: bytes 0-1023/2406569`；`bytes=-500` 返回尾部 500 字节。
+`wrangler.jsonc` 里 `run_worker_first` 只列了这两条路径。其余请求全部直接由静态资源返回，不计入 Worker 每日 10 万次请求额度。
+
+已验证：`Range: bytes=0-1023` 返回 `206` + `Content-Range: bytes 0-1023/2406569`；`bytes=-500` 返回尾部 500 字节；`/google5457b1908e9026ac.html` 返回 `200` + 正确正文。
 
 ### 两份忽略文件的分工
 
@@ -272,6 +275,14 @@ grep -rl "imgprompt.dev" . | xargs sed -i '' \
 
 ### 已完成（2026-11-05）
 
+**Google Search Console** —— 已验证。
+
+- 资源类型选「网址前缀」，地址 `https://imgprompt.dev/`
+- 验证方式用了两条，都已在站点生效：
+  - HTML 文件 `google5457b1908e9026ac.html`（根目录，**必须公开可访问，不要加进 `.assetsignore`**）
+  - HTML 标记 `<meta name="google-site-verification" content="..." />`（四页 `<head>` 都已插入）
+- 注意：静态资源会把 `*.html` 307 跳到去掉扩展名的路径，Google 验证文件必须留在原路径。`worker.js` 已专门处理这条路径。
+
 **IndexNow** —— Bing、Yandex、Seznam 等走这个协议，不用账号，提交即生效。
 
 - 验证文件 `23e25fbf9a0a4edab78a7d62eabdeb2f.txt` 在站点根目录，**必须公开可访问，不要加进 `.assetsignore`**
@@ -289,8 +300,8 @@ curl -sS -o /dev/null -w "%{http_code}\n" -X POST https://api.indexnow.org/index
 
 ### 需要手动做
 
-1. **Google Search Console** → 添加 `imgprompt.dev` → 验证（DNS 方式最简单，域名已在 Cloudflare）→ 提交 `https://imgprompt.dev/sitemap.xml`
-2. **Bing Webmaster Tools** → 添加站点 → 提交 sitemap（IndexNow 已提交 URL，但 sitemap 仍要单独提）
+1. **Google Search Console** → 资源已添加并验证。剩下：左侧「站点地图」提交 `https://imgprompt.dev/sitemap.xml`
+2. **Bing Webmaster Tools** → 添加站点 → 提交 sitemap（IndexNow 已提交 URL，但 sitemap 仍要单独提）。Bing 后台支持「从 GSC 导入」，可直接导入省一次验证
 3. **百度搜索资源平台** → 可选。大陆用户不是主要目标，且站点在大陆访问慢
 4. **Chrome 商店后台** → 扩展详情的「Website」字段填 `https://imgprompt.dev`
 
@@ -299,6 +310,18 @@ curl -sS -o /dev/null -w "%{http_code}\n" -X POST https://api.indexnow.org/index
 ## 已内置的 SEO 项
 
 - `<title>` / `<meta description>` / `<meta keywords>` / `<meta robots>`
+- **标题关键词前置，品牌名后置**。品牌名 `ImgPrompt` 是零搜索量的新词，放标题开头等于浪费权重最高的位置。当前四页标题：
+
+  | 页面 | 标题 | 长度 |
+  |---|---|---|
+  | `/` | `Image to Prompt — Free AI Art Prompt Generator \| ImgPrompt` | 58 |
+  | `/zh/` | `图片转提示词 — 免费 AI 绘画提示词反推工具 \| ImgPrompt` | 36 |
+  | `/ja/` | `画像をプロンプトに変換 — AI画像からプロンプト生成 \| ImgPrompt` | 39 |
+  | `/es/` | `Imagen a Prompt — Convierte imágenes en prompt de IA \| ImgPrompt` | 64 |
+
+  英文与西语控制在 60 字符内（Google 桌面端截断点约 60–65），中日文按字数算安全。
+- `description` 长度：英文 152、中文 95、日文 121、西语 148 字符，都在 Google 约 155–160 的截断点内。每条都带 `Midjourney` / `Stable Diffusion` / `无需 API Key` 这类长尾词与行动号召。
+- `name="keywords"` 保留但**无优化价值**：Google 2009 年起完全忽略该标签，Bing 只当极弱信号。不要指望改它能提升排名。
 - canonical + hreflang（en / zh-CN / ja / es / x-default，英文在根路径，每页都自引用）
 - Open Graph + Twitter Card，含 `og:locale`、三条 `og:locale:alternate`、`og:image:width/height/alt`
 - JSON-LD 两块：`SoftwareApplication`（含 featureList、screenshot、offers）和 `FAQPage`（五问五答，按语言生成）
@@ -326,7 +349,7 @@ node -e '...'   # 见 git 历史或直接对照上面的规则
 
 以下两项必须在部署时处理，代码里改不了：
 
-1. **提交收录**：Google Search Console / Bing Webmaster Tools，各提交一次 `https://imgprompt.dev/sitemap.xml`
+1. **提交收录**：Bing Webmaster Tools 提交一次 `https://imgprompt.dev/sitemap.xml`（GSC 已提交）
 2. **填 Chrome 商店**：扩展详情页的「Website」字段改成 `https://imgprompt.dev`
 
 可选优化（不影响收录，只影响点击率）：
@@ -335,3 +358,16 @@ node -e '...'   # 见 git 历史或直接对照上面的规则
 - 首屏视频未加 `<link rel="preload">`，2.3 MB 在 4G 上首帧约 2–3 秒。加了会挤占首屏带宽，当前用 `poster` 先出图，权衡后没加
 - `sitemap.xml` 的 `lastmod` 是手写日期，改内容时记得同步
 - 大陆访问慢。要改善只能备案后单独部署国内云，见「大陆访问」一节
+
+### 还没做的 SEO 项
+
+只有 4 个语言落地页，没有内容页，只能竞争 2–3 个核心词。要拿长尾流量得加内容页：
+
+| 内容页 | 目标长尾词 |
+|---|---|
+| `/zh/guide/` | 图片转提示词教程、怎么把图片反推成提示词 |
+| `/zh/midjourney-prompt/` | Midjourney 提示词反推、MJ 提示词生成 |
+| `/en/prompt-examples/` | AI art prompt examples、midjourney prompt from image |
+| `/zh/stable-diffusion-prompt/` | SD 提示词反推 |
+
+每页 800–1,500 字，页内链回对应语言落地页和 Chrome 商店页。`hero-poster.jpg` 109 KB 导致 LCP 3,840 / 6,940 ms（Web Analytics 实测 17% 为 poor），Core Web Vitals 已计入排名，压缩它也算 SEO 项。

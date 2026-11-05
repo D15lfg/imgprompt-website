@@ -23,7 +23,10 @@
     "html_handling": "auto-trailing-slash",
     // 找不到文件时返回 404.html，状态码 404
     "not_found_handling": "404-page",
-    // 只有视频走 Worker，其余全部直接由静态资源返回，不计入 Worker 请求额度
-    "run_worker_first": ["/assets/hero-demo.mp4"]
+    // 只有视频和 GSC 验证文件走 Worker，其余全部直接由静态资源返回，不计入 Worker 请求额度
+    "run_worker_first": [
+      "/assets/hero-demo.mp4",
+      "/google5457b1908e9026ac.html"
+    ]
   }
 }
